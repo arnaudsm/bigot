@@ -24,8 +24,19 @@ complex_funcs = {
     # "O(n!)": lambda n, avg_n, avg_dim: avg_dim/(log(avg_n, 2))*log(n, 2),
 }
 
+dimensions = {
+    "m": {
+        "name": "Space complexity:",
+        "benchmark": lambda n, func:  max(memory_usage(proc=(func, [int(n)]), interval=(0.01)))  # noqa
+    },
+    "t": {
+        "name": "Time complexity:",
+        "benchmark": lambda n, func:  Timer(functools.partial(func, int(n))).timeit(1)  # noqa
+    }
+}
 
-def calc_complexity(data, dim, bench_func, plot=False):
+
+def calc_complexity(data, dim, plot=False):
     data = data[[dim, "n"]].dropna(subset=[dim]).groupby(
         ["n"]).median().reset_index()
     data[dim] = data[dim]-data[dim].min()
@@ -59,18 +70,6 @@ def calc_complexity(data, dim, bench_func, plot=False):
 
 
 def benchmark(function, time_budget=5, plot=False):
-    dimensions = {
-        "m":
-        {
-            "name": "Space complexity:",
-            "benchmark": lambda n:  max(memory_usage(proc=(function, [int(n)]), interval=(0.01)))  # noqa
-        },
-        "t":
-        {
-            "name": "Time complexity:",
-            "benchmark": lambda n:  Timer(functools.partial(function, int(n))).timeit(1)  # noqa
-        }
-    }
 
     results = {}
     data = pd.DataFrame()
@@ -79,19 +78,18 @@ def benchmark(function, time_budget=5, plot=False):
         benchmark = params["benchmark"]
         test_time = time()
         for n in [int(n**2) for n in range(1, 10000)]:
-            try:
-                t = benchmark(n)
-            except:
-                break
+            t = benchmark(n, function)
             data = data.append({
                 "n": int(n),
                 dim: t
             }, ignore_index=True)
             if (time() - test_time) > time_budget/len(dimensions):
                 break
-
-        complexity = calc_complexity(data, dim, benchmark, plot=plot)
+        if data.shape[0] == 0:
+            return False
+        complexity = calc_complexity(data, dim, plot=plot)
         results[name] = complexity
-    results["Speed (iterations in {}s)".format(time_budget)] = int(data.n.max())
+    results["Speed (iterations in {}s)".format(
+        time_budget)] = int(data.n.max())
 
     return results
