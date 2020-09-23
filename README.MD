@@ -6,11 +6,8 @@ Benchmarking library with Space and Time Complexity estimation.
 ## Installation
 `pip install .`
 
-## Testing
-`pytest .`
-
 ## Usage
-### Your benchmark function shall have a single n parameter
+### Provide a benchmark function with a single dimension parameter
 ```python
 def on(n):
     x = 10000000*"-"*int(n)
@@ -55,3 +52,6 @@ print(bigot.Compare([on, on2]).space())
 0   On       1.0        49.0             O(n)
 1  On2       1.0         8.0           O(n^2)
 ```
+
+## Testing
+`pytest .`
