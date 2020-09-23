@@ -13,6 +13,6 @@ setup(
     ],
     author="Arnaud de Saint Meloir",
     author_email="arnaud.desaintmeloir@gmail.com",
-    description="Benchmark tool for time and space complexity.",
+    description="Benchmarking library with Space and Time Complexity estimation",
     include_package_data=True
 )
