@@ -1,21 +1,32 @@
-from bigot import Bigot
+import bigot
 from time import sleep
 
 
-def myfunction(n):
+def on(n):
+    x = 10000000*"-"*int(n)
+    sleep(0.001*n)
+
+
+def on2(n):
     x = 10000000*"-"*int(n**2)
     sleep(0.001*n**2)
 
 
-# First of all create your Bigot object with your function inside
-bigot = Bigot(myfunction)
+# Use the Space() and Time() classes to benchmark functions
+print("My function has a space complexity of", bigot.Space(on2),
+      "and a time complexity of", bigot.Time(on2))
 
-# Then use the space() and time() functions to estimate the complexity
-print("My function has a space complexity of", bigot.space(),
-      "and a time complexity of", bigot.time())
+# You can test our fancy options
+bench = bigot.Time(
+    on2,
+    plot=True,
+    duration=1,
+    verbose=True,
+    name="My fancy function"
+)
 
-# You can also plot your function to study its behavior
-print(bigot.time(plot=True, time_budget=5))
+# And check the number of iterations, useful when comparing functions
+print(bench.iterations, "iterations in", bench.duration, "seconds")
 
-# You can also calculate the two at once using
-print(bigot.all())
+# You can also compare multiple functions
+print(bigot.Compare([on, on2]).all())
