@@ -1,10 +1,10 @@
-![Example complexity graph](images/graph.png)
+![Example complexity graph](https://raw.githubusercontent.com/arnaudsm/bigot/master/images/graph.png)
 # Bigot
 Benchmarking library with Space and Time Complexity estimation.  
 *Pull requests are welcome !*
 
 ## Installation
-`pip install .`
+`pip install bigot`
 
 ## Usage
 ### Provide a benchmark function with a single dimension parameter
