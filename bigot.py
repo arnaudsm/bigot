@@ -1,16 +1,16 @@
 import collections
 import functools
+import json
 import math
 import operator
-from timeit import Timer
 from math import log
 from time import time
+from timeit import Timer
 
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from memory_profiler import memory_usage
-from pprint import pprint
 
 complex_funcs = {
     "O(n)": lambda n, avg_n, avg_dim: n*avg_dim/avg_n,
@@ -25,71 +25,83 @@ complex_funcs = {
 }
 
 dimensions = {
-    "m": {
-        "name": "Space complexity:",
-        "benchmark": lambda n, func:  max(memory_usage(proc=(func, [int(n)]), interval=(0.01)))  # noqa
-    },
-    "t": {
-        "name": "Time complexity:",
-        "benchmark": lambda n, func:  Timer(functools.partial(func, int(n))).timeit(1)  # noqa
-    }
+    "space": lambda n, func:  max(memory_usage(proc=(func, [int(n)]), interval=(0.001))),
+    "time": lambda n, func:  Timer(functools.partial(func, int(n))).timeit(1)
 }
 
 
-def calc_complexity(data, dim, plot=False):
-    data = data[[dim, "n"]].dropna(subset=[dim]).groupby(
-        ["n"]).median().reset_index()
-    data[dim] = data[dim]-data[dim].min()
+class Bigot():
+    def __init__(self, function, name=None):
+        self.function = function
+        self.name = name or function.__name__.capitalize().replace("_", " ")
+        self.data = pd.DataFrame()
+        self.results = {}
 
-    x = list(data.n.unique())
-    avg_n = data.n.median()
-    avg_dim = data[dim].median()
+    def time(self, *args, **kwargs):
+        return self.complexity("time", *args, **kwargs)
 
-    losses = {}
-    for func_name, func in complex_funcs.items():
-        y = [func(n, avg_n, avg_dim) for n in x]
-        loss = (data[dim]-y).abs().mean()
-        losses[func_name] = loss
+    def space(self, *args, **kwargs):
+        return self.complexity("space", *args, **kwargs)
 
-    func_closest = min(losses, key=losses.get)
+    def all(self, *args, **kwargs):
+        self.time(*args, **kwargs)
+        self.space(*args, **kwargs)
+        return self.results
 
-    if plot:
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=data.n, y=data[dim], name="Observation",
-                                 line=dict(width=1)))
-
-        for func_name, func in complex_funcs.items():
-            y = [func(n, avg_n, avg_dim) for n in x]
-            if max(y) < 2*data[dim].max():
-                fig.add_trace(go.Scatter(x=x, y=y, name=func_name,
-                                         line=dict(width=1, dash='dot')))
-
-        fig.show()
-
-    return func_closest
-
-
-def benchmark(function, time_budget=5, plot=False):
-
-    results = {}
-    data = pd.DataFrame()
-    for dim, params in dimensions.items():
-        name = params["name"]
-        benchmark = params["benchmark"]
+    def benchmark(self, dim, time_budget=5, *args, **kwargs):
+        dim_bench = dimensions[dim]
         test_time = time()
-        for n in [int(n**2) for n in range(1, 10000)]:
-            t = benchmark(n, function)
-            data = data.append({
+        for n in [int(n**2) for n in range(2, 10000)]:
+            y = dim_bench(n, self.function)
+            self.data = self.data.append({
                 "n": int(n),
-                dim: t
+                dim: y
             }, ignore_index=True)
-            if (time() - test_time) > time_budget/len(dimensions):
+            if (time() - test_time) > time_budget:
                 break
-        if data.shape[0] == 0:
-            return False
-        complexity = calc_complexity(data, dim, plot=plot)
-        results[name] = complexity
-    results["Speed (iterations in {}s)".format(
-        time_budget)] = int(data.n.max())
 
-    return results
+    def complexity(self, dim, plot=False, *args, **kwargs):
+        self.benchmark(dim, *args, **kwargs)
+
+        data = self.data[[dim, "n"]].dropna(subset=[dim]).groupby(
+            ["n"]).median().reset_index().sort_values(by="n")
+        if dim == "space":
+            data[dim] = data[dim]-data[dim].min()
+            data = data.iloc[1:]
+
+        x = list(data.n.unique())
+        avg_n = data.n.max()
+        avg_dim = data[dim].max()
+
+        losses = {}
+        for name, func in complex_funcs.items():
+            y = [func(n, avg_n, avg_dim) for n in x]
+            loss = (data[dim]-y).abs().mean()
+            losses[name] = loss
+
+        func_closest = min(losses, key=losses.get)
+
+        if plot:
+            fig = go.Figure(layout=go.Layout(title=go.layout.Title(
+                text="{dim} Complexity of {name} : Probably {func_closest}".format(
+                    dim=dim.capitalize(),
+                    name=self.name,
+                    func_closest=func_closest
+                )))
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=data.n, y=data[dim], name="Observation", line=dict(width=1)
+                )
+            )
+
+            for name, func in complex_funcs.items():
+                y = [func(n, avg_n, avg_dim) for n in x]
+                if max(y) < 2*data[dim].max():
+                    fig.add_trace(go.Scatter(x=x, y=y, name=name,
+                                             line=dict(width=1, dash='dot')))
+
+            fig.show()
+
+        self.results[dim] = func_closest
+        return func_closest
