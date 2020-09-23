@@ -21,49 +21,49 @@ complex_funcs = {
 
 explosive_funcs = ["O(2^n)", "O(n!)"]
 
-dimensions = {
-    "space": lambda n, func:  max(memory_usage(proc=(func, [int(n)]), interval=(0.001))),
-    "time": lambda n, func:  Timer(functools.partial(func, int(n))).timeit(1)
-}
 
+class Benchmark():
+    def __init__(self, function, name=None, verbose=False, duration=5, **kwargs):
+        """Abstract class to benchmark a function
 
-class Bigot():
-    def __init__(self, function, name=None, verbose=False):
+        Args:
+            function (function): The function to benchmark, with a single n parameter.
+            name (string, optional): Your function name, only used in graphics. Defaults to the function name.
+            verbose (bool, optional): Display all logs. Defaults to False.
+            duration (int, optional): Maximum time allocated in seconds. Defaults to 5.
+            plot (bool, optional): Wether to display a plotly chart comparing your complexity to usual classes.
+        """
         self.function = function
         self.name = name or function.__name__.capitalize().replace("_", " ")
         self.data = pd.DataFrame()
         self.verbose = verbose
-        self.results = {}
+        self.duration = duration
+        self.complexity = self.get_complexity(**kwargs)
 
-    def time(self, *args, **kwargs):
-        return self.complexity("time", *args, **kwargs)
+    def __repr__(self):
+        return self.complexity
 
-    def space(self, *args, **kwargs):
-        return self.complexity("space", *args, **kwargs)
+    @property
+    def iterations(self):
+        return int(self.data.n.max())
 
-    def all(self, *args, **kwargs):
-        self.time(*args, **kwargs)
-        self.space(*args, **kwargs)
-        return self.results
-
-    def benchmark(self, dim, time_budget=5, *args, **kwargs):
-        dim_bench = dimensions[dim]
+    def benchmark(self, **kwargs):
         test_time = time()
-        self.log("Benchmarking {}: ".format(dim), end="")
+        self.log("Benchmarking {}: ".format(self.dim), end="")
         for n in list(range(1, 9))+[int(n**2) for n in range(3, 10000)]:
             self.data = self.data.append({
                 "n": int(n),
-                dim: dim_bench(n, self.function)
+                self.dim: self.bench_func(n, self.function)
             }, ignore_index=True)
-            if (time() - test_time) > time_budget:
+            if (time() - test_time) > self.duration:
                 break
 
         self.log("Done {} iterations".format(n))
 
-    def complexity(self, dim, plot=False, *args, **kwargs):
+    def get_complexity(self, plot=False, **kwargs):
         # Benchmark the function first
         try:
-            self.benchmark(dim, *args, **kwargs)
+            self.benchmark(**kwargs)
         except Exception as e:
             # Ignore memory errors if enough points were collected
             if type(e).__name__ != "MemoryError" or self.data.shape[0] < 3:
@@ -71,11 +71,12 @@ class Bigot():
                 return
 
         # Filter and sort benchmark data
-        data = self.data[[dim, "n"]].dropna(subset=[dim]).sort_values(by="n")
+        data = self.data[[self.dim, "n"]].dropna(subset=[self.dim]).groupby(
+            ["n"]).median().reset_index().sort_values(by="n")
 
         # Zeroing minimal memory
-        if dim == "space":
-            data[dim] = data[dim]-data[dim].min()
+        if self.dim == "space":
+            data[self.dim] = data[self.dim]-data[self.dim].min()
             data = data.iloc[1:]
 
         # Remove excessive early points for longer benchmarks
@@ -84,14 +85,14 @@ class Bigot():
 
         x = list(data.n.unique())
         max_n = data.n.max()
-        max_dim = data[dim].max()
+        max_dim = data[self.dim].max()
 
         losses = {}
         for name, func in complex_funcs.items():
             if max_n > 30 and name in explosive_funcs:
                 continue
             y = [func(n, max_n, max_dim) for n in x]
-            loss = (data[dim]-y).abs().mean()
+            loss = (data[self.dim]-y).abs().mean()
             losses[name] = loss
 
         func_closest = min(losses, key=losses.get)
@@ -100,14 +101,14 @@ class Bigot():
             import plotly.graph_objects as go
             fig = go.Figure(layout=go.Layout(title=go.layout.Title(
                 text="{dim} Complexity of {name} : Probably {func_closest}".format(
-                    dim=dim.capitalize(),
+                    dim=self.dim.capitalize(),
                     name=self.name,
                     func_closest=func_closest
                 )))
             )
             fig.add_trace(
                 go.Scatter(
-                    x=data.n, y=data[dim], name="Observation", line=dict(width=2, color='black')
+                    x=data.n, y=data[self.dim], name="Observation", line=dict(width=2, color='black')
                 )
             )
 
@@ -115,15 +116,97 @@ class Bigot():
                 if name in explosive_funcs and func_closest not in explosive_funcs:
                     continue
                 y = [func(n, max_n, max_dim) for n in x]
-                if max(y) < 2*data[dim].max():
+                if max(y) < 2*data[self.dim].max():
                     fig.add_trace(go.Scatter(x=x, y=y, name=name,
                                              line=dict(width=1, dash='dot')))
 
             fig.show()
 
-        self.results[dim] = func_closest
         return func_closest
 
     def log(self, *args, **kwargs):
         if self.verbose:
             print(*args, **kwargs)
+
+
+class Time(Benchmark):
+    def __init__(self, function,  **kwargs):
+        """Benchmark the time complexity of a function
+
+        Args:
+            function (function): The function to benchmark, with a single n parameter.
+            name (string, optional): Your function name, only used in graphics. Defaults to the function name.
+            verbose (bool, optional): Display all logs. Defaults to False.
+            duration (int, optional): Maximum time allocated in seconds. Defaults to 5.
+            plot (bool, optional): Wether to display a plotly chart comparing your complexity to usual classes.
+        """
+        self.bench_func = lambda n, func:  Timer(
+            functools.partial(func, int(n))).timeit(1)
+        self.dim = "time"
+        super().__init__(function,  **kwargs)
+
+
+class Space(Benchmark):
+    def __init__(self, function,  **kwargs):
+        """Benchmark the space complexity of a function
+
+        Args:
+            function (function): The function to benchmark, with a single n parameter.
+            name (string, optional): Your function name, only used in graphics. Defaults to the function name.
+            verbose (bool, optional): Display all logs. Defaults to False.
+            duration (int, optional): Maximum time allocated in seconds. Defaults to 5.
+            plot (bool, optional): Wether to display a plotly chart comparing your complexity to usual classes.
+        """
+        self.bench_func = lambda n, func:  max(
+            memory_usage(proc=(func, [int(n)]), interval=(0.001)))
+        self.dim = "space"
+        super().__init__(function, **kwargs)
+
+
+class Compare():
+    def __init__(self, functions, **kwargs):
+        """Benchmark the complexity of multiple functions
+
+        Args:
+            functions (array): The functions to benchmark, each with a single n parameter.
+            verbose (bool, optional): Display all logs. Defaults to False.
+            duration (int, optional): Maximum time allocated in seconds. Defaults to 5.
+        """
+        self.functions = functions
+        self.results = pd.DataFrame(columns=['Name', 'Iterations'])
+
+    def time(self, **kwargs):
+        for function in self.functions:
+            result = Time(function, **kwargs)
+            self.results = self.results.append({
+                "Name": result.name,
+                "Iterations": result.iterations,
+                "Duration": result.duration,
+                "Time complexity": result.complexity,
+            }, ignore_index=True)
+        return self.results
+
+    def space(self, **kwargs):
+        for function in self.functions:
+            result = Space(function, **kwargs)
+            self.results = self.results.append({
+                "Name": result.name,
+                "Iterations": result.iterations,
+                "Duration": result.duration,
+                "Space complexity": result.complexity,
+            }, ignore_index=True)
+        return self.results
+
+    def all(self, **kwargs):
+        for function in self.functions:
+            result_space = Space(function, **kwargs)
+            result_time = Time(function, **kwargs)
+            self.results = self.results.append({
+                "Name": result_space.name,
+                "Time Iterations": result_time.iterations,
+                "Space Iterations": result_space.iterations,
+                "Duration": result_space.duration,
+                "Time complexity": result_time.complexity,
+                "Space complexity": result_space.complexity,
+            }, ignore_index=True)
+        return self.results
