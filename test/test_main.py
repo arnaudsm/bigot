@@ -13,7 +13,7 @@ def test_time_benchmark():
     for name, real_function in complex_funcs.items():
         def function(n): return fake_function(n, real_function)
         print("Checking time complexity of", name)
-        assert name == Time(function, name=name).time()
+        assert name == str(Time(function, name=name))
 
 
 def test_space_benchmark():
@@ -24,7 +24,7 @@ def test_space_benchmark():
     for name, real_function in complex_funcs.items():
         def function(n): return fake_function(n, real_function)
         print("Checking space complexity of", name)
-        assert name == Space(function, name=name).space()
+        assert name == str(Space(function, name=name))
 
 
 def test_space_benchmark():
