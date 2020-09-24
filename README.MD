@@ -12,8 +12,8 @@ Benchmarking library with Space and Time Complexity estimation.
 def on(n):
     x = 10000000*"-"*int(n)
     sleep(0.001*n)
-
-# Use the Space() and Time() classes to benchmark functions
+    
+import bigot
 print("Function has a space complexity of", bigot.Space(on2),
       "and a time complexity of", bigot.Time(on2))
 ```
