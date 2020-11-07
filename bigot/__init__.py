@@ -53,7 +53,8 @@ class Benchmark():
         for n in list(range(1, 9))+[int(n**2) for n in range(3, 10000)]:
             self.data = self.data.append({
                 "n": int(n),
-                self.dim: self.bench_func(n, self.function)
+                self.dim: self.bench_func(n, self.function),
+                "name": self.name,
             }, ignore_index=True)
             if (time() - test_time) > self.duration:
                 break
@@ -173,23 +174,26 @@ class Compare():
             duration (int, optional): Maximum time allocated in seconds. Defaults to 5.
         """
         self.functions = functions
-        self.results = pd.DataFrame()
+        self.results = {}
 
-    def time(self, **kwargs):
+    def run(self, dim, **kwargs):
+        assert dim in ["time", "space"]
         plot = kwargs.get("plot")
         if plot:
             del kwargs["plot"]
 
         data = pd.DataFrame()
         for function in self.functions:
-            result = Time(function, **kwargs)
-            self.results = self.results.append({
-                "Name": result.name,
-                "Iterations": result.iterations,
-                "Duration": result.duration,
-                "Time complexity": result.complexity,
-            }, ignore_index=True)
-            result.data["Function"] = result.name
+            result = globals()[dim.capitalize()](function, **kwargs)
+
+            self.results[result.name] = {
+                **self.results.get(result.name, {}),
+                **{
+                    "{} iterations".format(dim.capitalize()): result.iterations,
+                    "{} complexity".format(dim.capitalize()): result.complexity,
+                }
+            }
+
             data = data.append(result.data)
 
         if plot:
@@ -197,53 +201,23 @@ class Compare():
             px.line(
                 data,
                 x="n",
-                y="time",
-                color="Function",
-                title="Time Complexities"
+                y=dim,
+                color="name",
+                title="{} complexities".format(dim.capitalize())
             ).show()
-        self.results = self.results.set_index("Name")
-        return self.results
 
-    def space(self, **kwargs):
-        plot = kwargs.get("plot")
-        if plot:
-            del kwargs["plot"]
-
-        data = pd.DataFrame()
-        for function in self.functions:
-            result = Space(function, **kwargs)
-            self.results = self.results.append({
-                "Name": result.name,
-                "Iterations": result.iterations,
-                "Duration": result.duration,
-                "Space complexity": result.complexity,
-            }, ignore_index=True)
-            result.data["Function"] = result.name
-            data = data.append(result.data)
-
-        if plot:
-            import plotly.express as px
-            px.line(
-                data,
-                x="n",
-                y="space",
-                color="Function",
-                title="Space Complexities"
-            ).show()
-        self.results = self.results.set_index("Name")
-        return self.results
+        return pd.DataFrame.from_dict(self.results, orient="index")
 
     def all(self, **kwargs):
-        for function in self.functions:
-            result_space = Space(function, **kwargs)
-            result_time = Time(function, **kwargs)
-            self.results = self.results.append({
-                "Name": result_space.name,
-                "Time Iterations": result_time.iterations,
-                "Space Iterations": result_space.iterations,
-                "Duration": result_space.duration,
-                "Time complexity": result_time.complexity,
-                "Space complexity": result_space.complexity,
-            }, ignore_index=True)
+        self.run("space", **kwargs)
+        self.run("time", **kwargs)
 
-        return self.results
+        return pd.DataFrame.from_dict(self.results, orient="index")
+
+    def time(self, **kwargs):
+        self.run("time", **kwargs)
+        return pd.DataFrame.from_dict(self.results, orient="index")
+
+    def space(self, **kwargs):
+        self.run("space", **kwargs)
+        return pd.DataFrame.from_dict(self.results, orient="index")
