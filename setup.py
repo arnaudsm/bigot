@@ -13,6 +13,7 @@ setup(
         "memory-profiler",
         "pandas",
         "plotly",
+        "pandas",
     ],
     author="Arnaud de Saint Meloir",
     author_email="arnaud.desaintmeloir@gmail.com",
