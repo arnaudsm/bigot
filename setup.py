@@ -20,6 +20,6 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/arnaudsm/bigot",
-    description="Benchmarking library with Space and Time Complexity estimation",
+    description="Benchmarking library with Space and Time Complexity estimation",  # noqa
     include_package_data=True
 )

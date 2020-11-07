@@ -3,12 +3,12 @@ from time import sleep
 
 
 def on(n):
-    x = 10000000*"-"*int(n)
+    x = 10000000*"-"*int(n)  # noqa
     sleep(0.001*n)
 
 
 def on2(n):
-    x = 10000000*"-"*int(n**2)
+    x = 10000000*"-"*int(n**2)  # noqa
     sleep(0.001*n**2)
 
 

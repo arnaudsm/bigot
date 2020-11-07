@@ -1,9 +1,7 @@
 from time import sleep
-from math import factorial, log
 
-import pytest
-
-from bigot import Time, Space, Compare, complex_funcs
+import pytest  # noqa
+from bigot import Compare, Space, Time, complex_funcs
 
 
 def test_time_benchmark():
@@ -18,7 +16,7 @@ def test_time_benchmark():
 
 def test_space_benchmark():
     def fake_function(n, func):
-        x = 10000000*"-"*int(func(n, 2, 2))
+        x = 10000000*"-"*int(func(n, 2, 2))  # noqa
         sleep(0.01)
 
     for name, real_function in complex_funcs.items():
@@ -29,11 +27,11 @@ def test_space_benchmark():
 
 def test_compare():
     def on(n):
-        x = 10000000*"-"*int(n)
+        x = 10000000*"-"*int(n)  # noqa
         sleep(0.001*n)
 
     def on2(n):
-        x = 10000000*"-"*int(n**2)
+        x = 10000000*"-"*int(n**2)  # noqa
         sleep(0.001*n**2)
 
     assert Compare([on, on2]).all().shape == (2, 4)
