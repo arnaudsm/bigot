@@ -27,7 +27,7 @@ def test_space_benchmark():
         assert name == str(Space(function, name=name))
 
 
-def test_space_benchmark():
+def test_compare():
     def on(n):
         x = 10000000*"-"*int(n)
         sleep(0.001*n)
@@ -36,6 +36,6 @@ def test_space_benchmark():
         x = 10000000*"-"*int(n**2)
         sleep(0.001*n**2)
 
-    assert Compare([on, on2]).all().shape == (2, 7)
-    assert Compare([on, on2]).time().shape == (2, 4)
-    assert Compare([on, on2]).space().shape == (2, 4)
+    assert Compare([on, on2]).all().shape == (2, 4)
+    assert Compare([on, on2]).time().shape == (2, 2)
+    assert Compare([on, on2]).space().shape == (2, 2)
