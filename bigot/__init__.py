@@ -176,6 +176,11 @@ class Compare():
         self.results = pd.DataFrame()
 
     def time(self, **kwargs):
+        plot = kwargs.get("plot")
+        if plot:
+            del kwargs["plot"]
+
+        data = pd.DataFrame()
         for function in self.functions:
             result = Time(function, **kwargs)
             self.results = self.results.append({
@@ -184,9 +189,27 @@ class Compare():
                 "Duration": result.duration,
                 "Time complexity": result.complexity,
             }, ignore_index=True)
+            result.data["Function"] = result.name
+            data = data.append(result.data)
+
+        if plot:
+            import plotly.express as px
+            px.line(
+                data,
+                x="n",
+                y="time",
+                color="Function",
+                title="Time Complexities"
+            ).show()
+        self.results = self.results.set_index("Name")
         return self.results
 
     def space(self, **kwargs):
+        plot = kwargs.get("plot")
+        if plot:
+            del kwargs["plot"]
+
+        data = pd.DataFrame()
         for function in self.functions:
             result = Space(function, **kwargs)
             self.results = self.results.append({
@@ -195,6 +218,19 @@ class Compare():
                 "Duration": result.duration,
                 "Space complexity": result.complexity,
             }, ignore_index=True)
+            result.data["Function"] = result.name
+            data = data.append(result.data)
+
+        if plot:
+            import plotly.express as px
+            px.line(
+                data,
+                x="n",
+                y="space",
+                color="Function",
+                title="Space Complexities"
+            ).show()
+        self.results = self.results.set_index("Name")
         return self.results
 
     def all(self, **kwargs):
@@ -209,4 +245,5 @@ class Compare():
                 "Time complexity": result_time.complexity,
                 "Space complexity": result_space.complexity,
             }, ignore_index=True)
+
         return self.results
