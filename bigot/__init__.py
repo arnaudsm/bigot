@@ -173,7 +173,7 @@ class Compare():
             duration (int, optional): Maximum time allocated in seconds. Defaults to 5.
         """
         self.functions = functions
-        self.results = pd.DataFrame(columns=['Name', 'Iterations'])
+        self.results = pd.DataFrame()
 
     def time(self, **kwargs):
         for function in self.functions:
